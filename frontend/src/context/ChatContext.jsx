@@ -43,10 +43,12 @@ export const ChatProvider = ({ children }) => {
             });
 
             socket.on('typing', ({ conversationId, userId }) => {
+                console.log('Received typing event:', { conversationId, userId });
                 setTypingUsers((prev) => ({ ...prev, [conversationId]: userId }));
             });
 
             socket.on('stopTyping', ({ conversationId, userId }) => {
+                console.log('Received stopTyping event:', { conversationId, userId });
                 setTypingUsers((prev) => {
                     const newState = { ...prev };
                     delete newState[conversationId];
@@ -99,6 +101,11 @@ export const ChatProvider = ({ children }) => {
 
     const sendTyping = (receiverId, isTyping) => {
         if (socket && activeConversation) {
+            console.log('Sending typing event:', {
+                event: isTyping ? 'typing' : 'stopTyping',
+                conversationId: activeConversation.id,
+                receiverId
+            });
             socket.emit(isTyping ? 'typing' : 'stopTyping', {
                 conversationId: activeConversation.id,
                 receiverId,

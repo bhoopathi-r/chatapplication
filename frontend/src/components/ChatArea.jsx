@@ -3,6 +3,7 @@ import { useChat } from '../context/ChatContext';
 import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
 import { Send, Smile, Paperclip, MoreVertical } from 'lucide-react';
+import UserStatus from './user/UserStatus';
 
 const ChatArea = () => {
     const { user } = useAuth();
@@ -10,6 +11,8 @@ const ChatArea = () => {
     const { onlineUsers } = useSocket();
     const [input, setInput] = useState('');
     const messagesEndRef = useRef(null);
+    const typingTimeoutRef = useRef(null);
+    const isTypingRef = useRef(false);
 
     const otherUser = activeConversation
         ? (activeConversation.user1_id === user.id ? activeConversation.user2 : activeConversation.user1)
@@ -28,16 +31,66 @@ const ChatArea = () => {
         if (input.trim() && otherUser) {
             sendMessage(otherUser.id, input);
             setInput('');
-            sendTyping(otherUser.id, false);
+
+            // Stop typing indicator immediately when sending
+            if (isTypingRef.current) {
+                sendTyping(otherUser.id, false);
+                isTypingRef.current = false;
+            }
+            if (typingTimeoutRef.current) {
+                clearTimeout(typingTimeoutRef.current);
+                typingTimeoutRef.current = null;
+            }
         }
     };
 
     const handleTyping = (e) => {
         setInput(e.target.value);
-        if (otherUser) {
-            sendTyping(otherUser.id, e.target.value.length > 0);
+
+        if (!otherUser) return;
+
+        const isTyping = e.target.value.length > 0;
+
+        // If user starts typing and wasn't typing before
+        if (isTyping && !isTypingRef.current) {
+            sendTyping(otherUser.id, true);
+            isTypingRef.current = true;
+        }
+
+        // Clear existing timeout
+        if (typingTimeoutRef.current) {
+            clearTimeout(typingTimeoutRef.current);
+        }
+
+        // If user is typing, set a timeout to stop typing indicator after 1 second of inactivity
+        if (isTyping) {
+            typingTimeoutRef.current = setTimeout(() => {
+                if (isTypingRef.current) {
+                    sendTyping(otherUser.id, false);
+                    isTypingRef.current = false;
+                }
+            }, 1000);
+        } else {
+            // If input is empty, stop typing immediately
+            if (isTypingRef.current) {
+                sendTyping(otherUser.id, false);
+                isTypingRef.current = false;
+            }
         }
     };
+
+    // Cleanup typing indicator when conversation changes or component unmounts
+    useEffect(() => {
+        return () => {
+            if (typingTimeoutRef.current) {
+                clearTimeout(typingTimeoutRef.current);
+            }
+            if (isTypingRef.current && otherUser) {
+                sendTyping(otherUser.id, false);
+                isTypingRef.current = false;
+            }
+        };
+    }, [activeConversation]);
 
     if (!activeConversation) {
         return (
@@ -62,9 +115,12 @@ const ChatArea = () => {
                     </div>
                     <div>
                         <h3 className="font-semibold text-slate-800">{otherUser.name}</h3>
-                        <span className="text-xs text-green-500 font-medium">
-                            {onlineUsers.has(otherUser.id) ? 'Online' : 'Offline'}
-                        </span>
+                        <UserStatus
+                            isOnline={onlineUsers.has(otherUser.id)}
+                            isTyping={isOtherTyping}
+                            lastSeen={otherUser.last_seen}
+                            size="small"
+                        />
                     </div>
                 </div>
                 <button className="p-2 text-slate-400 hover:text-slate-600">

@@ -55,6 +55,13 @@ export class UsersService {
     });
   }
 
+  async getOnlineUsers(): Promise<User[]> {
+    return this.usersRepository.createQueryBuilder('user')
+      .where('user.status = :status', { status: 'online' })
+      .select(['user.id', 'user.name', 'user.email', 'user.avatar_url', 'user.status', 'user.last_seen'])
+      .getMany();
+  }
+
   async findAllExcept(id: number): Promise<User[]> {
     return this.usersRepository.createQueryBuilder('user')
       .where('user.id != :id', { id })

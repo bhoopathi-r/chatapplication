@@ -23,6 +23,7 @@ export class GatewayGateway implements OnGatewayConnection, OnGatewayDisconnect 
   server: Server;
 
   private connectedUsers: Map<number, string> = new Map(); // userId -> socketId
+  private typingTimeouts: Map<string, NodeJS.Timeout> = new Map(); // conversationId:userId -> timeout
 
   constructor(
     private jwtService: JwtService,
@@ -44,8 +45,14 @@ export class GatewayGateway implements OnGatewayConnection, OnGatewayDisconnect 
 
       this.connectedUsers.set(userId, client.id);
       await this.usersService.updateStatus(userId, 'online');
-      
+
+      // Broadcast to all clients that this user is online
       this.server.emit('userOnline', userId);
+
+      // Send the list of all currently online users to the newly connected client
+      const onlineUserIds = Array.from(this.connectedUsers.keys());
+      client.emit('onlineUsers', onlineUserIds);
+
       console.log(`Client connected: ${userId}`);
     } catch (err) {
       client.disconnect();
@@ -83,7 +90,7 @@ export class GatewayGateway implements OnGatewayConnection, OnGatewayDisconnect 
     if (receiverSocketId) {
       this.server.to(receiverSocketId).emit('receiveMessage', message);
     }
-    
+
     // Always emit back to sender (or handle in frontend)
     client.emit('messageSent', message);
   }
@@ -95,11 +102,34 @@ export class GatewayGateway implements OnGatewayConnection, OnGatewayDisconnect 
   ) {
     const senderId = this.getUserId(client);
     const receiverSocketId = this.connectedUsers.get(data.receiverId);
-    if (receiverSocketId) {
+
+    console.log('Typing event received:', { senderId, receiverId: data.receiverId, conversationId: data.conversationId, receiverSocketId });
+
+    if (receiverSocketId && senderId) {
+      // Clear any existing timeout for this user in this conversation
+      const timeoutKey = `${data.conversationId}:${senderId}`;
+      if (this.typingTimeouts.has(timeoutKey)) {
+        clearTimeout(this.typingTimeouts.get(timeoutKey));
+      }
+
+      // Emit typing event
       this.server.to(receiverSocketId).emit('typing', {
         conversationId: data.conversationId,
         userId: senderId,
       });
+      console.log('Emitted typing event to receiver:', { receiverSocketId, senderId, conversationId: data.conversationId });
+
+      // Set timeout to auto-stop typing after 3 seconds
+      const timeout = setTimeout(() => {
+        this.server.to(receiverSocketId).emit('stopTyping', {
+          conversationId: data.conversationId,
+          userId: senderId,
+        });
+        this.typingTimeouts.delete(timeoutKey);
+        console.log('Auto-stopped typing after timeout:', { senderId, conversationId: data.conversationId });
+      }, 3000);
+
+      this.typingTimeouts.set(timeoutKey, timeout);
     }
   }
 
@@ -110,7 +140,15 @@ export class GatewayGateway implements OnGatewayConnection, OnGatewayDisconnect 
   ) {
     const senderId = this.getUserId(client);
     const receiverSocketId = this.connectedUsers.get(data.receiverId);
-    if (receiverSocketId) {
+
+    if (receiverSocketId && senderId) {
+      // Clear the timeout if it exists
+      const timeoutKey = `${data.conversationId}:${senderId}`;
+      if (this.typingTimeouts.has(timeoutKey)) {
+        clearTimeout(this.typingTimeouts.get(timeoutKey));
+        this.typingTimeouts.delete(timeoutKey);
+      }
+
       this.server.to(receiverSocketId).emit('stopTyping', {
         conversationId: data.conversationId,
         userId: senderId,
