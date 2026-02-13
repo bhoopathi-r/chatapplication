@@ -21,6 +21,10 @@ export const SocketProvider = ({ children }) => {
                 console.log('Socket connected');
             });
 
+            newSocket.on('onlineUsers', (userIds) => {
+                setOnlineUsers(new Set(userIds));
+            });
+
             newSocket.on('userOnline', (userId) => {
                 setOnlineUsers((prev) => new Set([...prev, userId]));
             });

@@ -4,6 +4,7 @@ import { useChat } from '../context/ChatContext';
 import { useSocket } from '../context/SocketContext';
 import { Search, LogOut, User as UserIcon } from 'lucide-react';
 import api from '../services/api';
+import UserProfileCard from './user/UserProfileCard';
 
 const Sidebar = () => {
     const { user, logout } = useAuth();
@@ -95,28 +96,17 @@ const Sidebar = () => {
                     const isOnline = onlineUsers.has(otherUser.id);
 
                     return (
-                        <button
+                        <UserProfileCard
                             key={conv.id}
+                            user={otherUser}
+                            isOnline={isOnline}
+                            isTyping={false}
+                            variant="default"
+                            showEmail={false}
                             onClick={() => setActiveConversation(conv)}
-                            className={`w-full p-4 flex items-center gap-3 transition-colors ${isActive ? 'bg-primary-50 border-r-4 border-primary-500' : 'hover:bg-slate-50'
-                                }`}
-                        >
-                            <div className="relative">
-                                <div className="w-12 h-12 rounded-full bg-slate-200 flex items-center justify-center font-bold text-slate-600">
-                                    {otherUser.name?.[0]?.toUpperCase()}
-                                </div>
-                                {isOnline && (
-                                    <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></div>
-                                )}
-                            </div>
-                            <div className="flex-1 text-left">
-                                <div className="flex justify-between items-center mb-1">
-                                    <h4 className="font-semibold text-slate-800 text-sm">{otherUser.name}</h4>
-                                    <span className="text-[10px] text-slate-400">12:30 PM</span>
-                                </div>
-                                <p className="text-xs text-slate-500 truncate">Last message content...</p>
-                            </div>
-                        </button>
+                            isActive={isActive}
+                            className="w-full"
+                        />
                     );
                 })}
             </div>
