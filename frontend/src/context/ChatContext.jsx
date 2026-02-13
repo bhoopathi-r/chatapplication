@@ -12,6 +12,7 @@ export const ChatProvider = ({ children }) => {
     const [activeConversation, setActiveConversation] = useState(null);
     const [messages, setMessages] = useState([]);
     const [typingUsers, setTypingUsers] = useState({}); // conversationId -> userId
+    const [showUserInfo, setShowUserInfo] = useState(false);
 
     useEffect(() => {
         if (user) {
@@ -122,6 +123,10 @@ export const ChatProvider = ({ children }) => {
         }
     };
 
+    const toggleUserInfo = () => {
+        setShowUserInfo((prev) => !prev);
+    };
+
     const startConversation = async (otherUserId) => {
         try {
             const response = await api.post('/conversations', { userId: otherUserId });
@@ -144,7 +149,10 @@ export const ChatProvider = ({ children }) => {
             sendMessage,
             startConversation,
             typingUsers,
-            sendTyping
+            sendTyping,
+            showUserInfo,
+            setShowUserInfo,
+            toggleUserInfo
         }}>
             {children}
         </ChatContext.Provider>

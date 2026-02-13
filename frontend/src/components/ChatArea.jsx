@@ -2,12 +2,12 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useChat } from '../context/ChatContext';
 import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
-import { Send, Smile, Paperclip, MoreVertical } from 'lucide-react';
+import { Send, Smile, Paperclip, MoreVertical, ArrowLeft } from 'lucide-react';
 import UserStatus from './user/UserStatus';
 
 const ChatArea = () => {
     const { user } = useAuth();
-    const { activeConversation, messages, sendMessage, typingUsers, sendTyping } = useChat();
+    const { activeConversation, setActiveConversation, messages, sendMessage, typingUsers, sendTyping, toggleUserInfo, setShowUserInfo } = useChat();
     const { onlineUsers } = useSocket();
     const [input, setInput] = useState('');
     const messagesEndRef = useRef(null);
@@ -108,19 +108,34 @@ const ChatArea = () => {
     return (
         <div className="flex-1 bg-slate-50 flex flex-col h-full overflow-hidden">
             {/* Chat Header */}
+            {/* Chat Header */}
             <div className="h-16 bg-white border-b border-slate-200 px-6 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center font-bold text-primary-600">
-                        {otherUser.name?.[0]?.toUpperCase()}
-                    </div>
-                    <div>
-                        <h3 className="font-semibold text-slate-800">{otherUser.name}</h3>
-                        <UserStatus
-                            isOnline={onlineUsers.has(otherUser.id)}
-                            isTyping={isOtherTyping}
-                            lastSeen={otherUser.last_seen}
-                            size="small"
-                        />
+                    <button
+                        onClick={() => {
+                            setActiveConversation(null);
+                            setShowUserInfo(false);
+                        }}
+                        className="p-1 -ml-2 text-slate-400 hover:text-slate-600 lg:hidden"
+                    >
+                        <ArrowLeft size={20} />
+                    </button>
+                    <div
+                        className="flex items-center gap-3 cursor-pointer hover:bg-slate-50 p-1 rounded-lg transition-colors"
+                        onClick={toggleUserInfo}
+                    >
+                        <div className="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center font-bold text-primary-600">
+                            {otherUser.name?.[0]?.toUpperCase()}
+                        </div>
+                        <div>
+                            <h3 className="font-semibold text-slate-800">{otherUser.name}</h3>
+                            <UserStatus
+                                isOnline={onlineUsers.has(otherUser.id)}
+                                isTyping={isOtherTyping}
+                                lastSeen={otherUser.last_seen}
+                                size="small"
+                            />
+                        </div>
                     </div>
                 </div>
                 <button className="p-2 text-slate-400 hover:text-slate-600">

@@ -6,25 +6,18 @@ import { Mail, Clock, Calendar, User, MapPin } from 'lucide-react';
 
 const RightSidebar = () => {
     const { user } = useAuth();
-    const { activeConversation } = useChat();
+    const { activeConversation, showUserInfo } = useChat();
     const { onlineUsers } = useSocket();
 
-    if (!activeConversation) {
-        return (
-            <div className="w-80 h-full bg-white border-l border-slate-200 hidden lg:flex flex-col items-center justify-center p-8 text-center">
-                <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center text-slate-300 mb-4">
-                    <User size={32} />
-                </div>
-                <p className="text-sm text-slate-400">Select a conversation to view profile details</p>
-            </div>
-        );
+    if (!activeConversation || !showUserInfo) {
+        return null;
     }
 
     const otherUser = activeConversation.user1_id === user.id ? activeConversation.user2 : activeConversation.user1;
     const isOnline = onlineUsers.has(otherUser.id);
 
     return (
-        <div className="w-80 h-full bg-white border-l border-slate-200 hidden xl:flex flex-col overflow-y-auto">
+        <div className="w-80 h-full bg-white border-l border-slate-200 flex flex-col overflow-y-auto animate-in slide-in-from-right duration-300">
             <div className="p-8 flex flex-col items-center border-b border-slate-100">
                 <div className="relative mb-4">
                     <div className="w-24 h-24 rounded-full bg-primary-50 flex items-center justify-center text-3xl font-bold text-primary-600">
