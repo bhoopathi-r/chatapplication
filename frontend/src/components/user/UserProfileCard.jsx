@@ -74,7 +74,7 @@ const UserProfileCard = ({
 
     const renderInfo = () => (
         <div className="flex-1 min-w-0">
-            <h4 className={`font-semibold text-slate-800 truncate ${variant === 'compact' ? 'text-xs' : 'text-sm'}`}>
+            <h4 className={`font-semibold flex text-slate-800 truncate ${variant === 'compact' ? 'text-xs' : 'text-sm'}`}>
                 {user.name}
             </h4>
             {showEmail && user.email && variant !== 'compact' && (
