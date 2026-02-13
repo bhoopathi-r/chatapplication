@@ -2,17 +2,29 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Message } from './entities/message.entity';
+import { Conversation } from '../conversations/entities/conversation.entity';
 
 @Injectable()
 export class MessagesService {
   constructor(
     @InjectRepository(Message)
     private messagesRepository: Repository<Message>,
+    @InjectRepository(Conversation)
+    private conversationsRepository: Repository<Conversation>,
   ) {}
 
   async create(messageData: Partial<Message>): Promise<Message> {
     const message = this.messagesRepository.create(messageData);
-    return this.messagesRepository.save(message);
+    const savedMessage = await this.messagesRepository.save(message);
+    
+    // Update conversation's last_message_at
+    if (savedMessage.conversation_id) {
+      await this.conversationsRepository.update(savedMessage.conversation_id, {
+        last_message_at: savedMessage.created_at,
+      });
+    }
+
+    return savedMessage;
   }
 
   async findByConversation(conversationId: number): Promise<Message[]> {

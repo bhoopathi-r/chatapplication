@@ -86,13 +86,20 @@ export class GatewayGateway implements OnGatewayConnection, OnGatewayDisconnect 
       content: data.content,
     });
 
+    const conversationUpdatePayload = {
+      conversationId: data.conversationId,
+      last_message_at: message.created_at,
+    };
+
     const receiverSocketId = this.connectedUsers.get(data.receiverId);
     if (receiverSocketId) {
       this.server.to(receiverSocketId).emit('receiveMessage', message);
+      this.server.to(receiverSocketId).emit('conversationUpdated', conversationUpdatePayload);
     }
 
     // Always emit back to sender (or handle in frontend)
     client.emit('messageSent', message);
+    client.emit('conversationUpdated', conversationUpdatePayload);
   }
 
   @SubscribeMessage('typing')
