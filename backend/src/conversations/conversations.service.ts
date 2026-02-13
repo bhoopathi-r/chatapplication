@@ -42,7 +42,7 @@ export class ConversationsService {
         { user2_id: userId },
       ],
       relations: ['user1', 'user2'],
-      order: { created_at: 'DESC' },
+      order: { last_message_at: 'DESC' },
     });
   }
 
@@ -50,6 +50,12 @@ export class ConversationsService {
     return this.conversationsRepository.findOne({
       where: { id },
       relations: ['user1', 'user2'],
+    });
+  }
+
+  async updateLastMessageAt(conversationId: number, date: Date = new Date()): Promise<void> {
+    await this.conversationsRepository.update(conversationId, {
+      last_message_at: date,
     });
   }
 }

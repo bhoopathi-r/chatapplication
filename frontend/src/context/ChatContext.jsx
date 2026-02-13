@@ -32,14 +32,28 @@ export const ChatProvider = ({ children }) => {
                     setMessages((prev) => [...prev, message]);
                     api.post(`/messages/read/${activeConversation.id}`);
                 }
-                updateConversations(message);
             });
 
             socket.on('messageSent', (message) => {
                 if (activeConversation && message.conversation_id === activeConversation.id) {
                     setMessages((prev) => [...prev, message]);
                 }
-                updateConversations(message);
+            });
+
+            socket.on('conversationUpdated', ({ conversationId, last_message_at }) => {
+                setConversations((prev) => {
+                    const conversationIndex = prev.findIndex(c => c.id === conversationId);
+                    if (conversationIndex === -1) return prev;
+
+                    const updatedConversations = [...prev];
+                    const [updatedConversation] = updatedConversations.splice(conversationIndex, 1);
+
+                    // Update timestamp
+                    updatedConversation.last_message_at = last_message_at;
+
+                    // Move to top
+                    return [updatedConversation, ...updatedConversations];
+                });
             });
 
             socket.on('typing', ({ conversationId, userId }) => {
@@ -59,6 +73,7 @@ export const ChatProvider = ({ children }) => {
             return () => {
                 socket.off('receiveMessage');
                 socket.off('messageSent');
+                socket.off('conversationUpdated');
                 socket.off('typing');
                 socket.off('stopTyping');
             };
@@ -81,12 +96,6 @@ export const ChatProvider = ({ children }) => {
         } catch (error) {
             console.error('Failed to load messages', error);
         }
-    };
-
-    const updateConversations = (message) => {
-        // Logic to update the latest message in conversations list
-        // and move it to top (simplified here)
-        loadConversations();
     };
 
     const sendMessage = (receiverId, content) => {
