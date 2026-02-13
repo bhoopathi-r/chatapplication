@@ -30,7 +30,7 @@ export class GatewayGateway implements OnGatewayConnection, OnGatewayDisconnect 
     private usersService: UsersService,
     private messagesService: MessagesService,
     private conversationsService: ConversationsService,
-  ) {}
+  ) { }
 
   async handleConnection(client: Socket) {
     try {
@@ -74,7 +74,7 @@ export class GatewayGateway implements OnGatewayConnection, OnGatewayDisconnect 
   @SubscribeMessage('sendMessage')
   async handleMessage(
     @ConnectedSocket() client: Socket,
-    @MessageBody() data: { conversationId: number; receiverId: number; content: string },
+    @MessageBody() data: { conversationId: number; receiverId: number; content: string; replyToId?: number },
   ) {
     const senderId = this.getUserId(client);
     if (!senderId) return;
@@ -84,6 +84,7 @@ export class GatewayGateway implements OnGatewayConnection, OnGatewayDisconnect 
       sender_id: senderId,
       receiver_id: data.receiverId,
       content: data.content,
+      reply_to_id: data.replyToId,
     });
 
     const conversationUpdatePayload = {
@@ -161,6 +162,71 @@ export class GatewayGateway implements OnGatewayConnection, OnGatewayDisconnect 
         userId: senderId,
       });
     }
+  }
+
+  @SubscribeMessage('editMessage')
+  async handleEditMessage(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { id: number; receiverId: number; content: string },
+  ) {
+    const message = await this.messagesService.update(data.id, data.content);
+    const receiverSocketId = this.connectedUsers.get(data.receiverId);
+    if (receiverSocketId) {
+      this.server.to(receiverSocketId).emit('messageEdited', message);
+    }
+    client.emit('messageEdited', message);
+  }
+
+  @SubscribeMessage('deleteMessage')
+  async handleDeleteMessage(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { id: number; receiverId: number; deleteForEveryone: boolean },
+  ) {
+    if (data.deleteForEveryone) {
+      await this.messagesService.deleteForEveryone(data.id);
+      const receiverSocketId = this.connectedUsers.get(data.receiverId);
+      if (receiverSocketId) {
+        this.server.to(receiverSocketId).emit('messageDeleted', { id: data.id, deleteForEveryone: true });
+      }
+      client.emit('messageDeleted', { id: data.id, deleteForEveryone: true });
+    } else {
+      await this.messagesService.deleteForMe(data.id);
+      client.emit('messageDeleted', { id: data.id, deleteForEveryone: false });
+    }
+  }
+
+  @SubscribeMessage('pinMessage')
+  async handlePinMessage(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { id: number; receiverId: number; isPinned: boolean },
+  ) {
+    const message = await this.messagesService.setPinned(data.id, data.isPinned);
+    const receiverSocketId = this.connectedUsers.get(data.receiverId);
+    if (receiverSocketId) {
+      this.server.to(receiverSocketId).emit('messagePinned', message);
+    }
+    client.emit('messagePinned', message);
+  }
+
+  @SubscribeMessage('clearChat')
+  async handleClearChat(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { conversationId: number },
+  ) {
+    const userId = this.getUserId(client);
+    if (userId) {
+      await this.messagesService.clearChat(data.conversationId, userId);
+      client.emit('chatCleared', { conversationId: data.conversationId });
+    }
+  }
+
+  @SubscribeMessage('searchMessages')
+  async handleSearchMessages(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { conversationId: number; query: string },
+  ) {
+    const messages = await this.messagesService.searchMessages(data.conversationId, data.query);
+    client.emit('searchResults', { messages });
   }
 
   private getUserId(client: Socket): number | null {

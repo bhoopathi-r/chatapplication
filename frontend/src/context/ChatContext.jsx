@@ -71,12 +71,48 @@ export const ChatProvider = ({ children }) => {
                 });
             });
 
+            socket.on('messageEdited', (editedMessage) => {
+                setMessages((prev) => prev.map(m => m.id === editedMessage.id ? editedMessage : m));
+            });
+
+            socket.on('messageDeleted', ({ id, deleteForEveryone }) => {
+                if (deleteForEveryone) {
+                    setMessages((prev) => prev.map(m => m.id === id ? { ...m, content: 'This message was deleted', is_deleted_everyone: true } : m));
+                } else {
+                    setMessages((prev) => prev.filter(m => m.id !== id));
+                }
+            });
+
+            socket.on('messagePinned', (pinnedMessage) => {
+                setMessages((prev) => prev.map(m => m.id === pinnedMessage.id ? pinnedMessage : m));
+            });
+
+            socket.on('messagePinned', (pinnedMessage) => {
+                setMessages((prev) => prev.map(m => m.id === pinnedMessage.id ? pinnedMessage : m));
+            });
+
+            socket.on('chatCleared', ({ conversationId }) => {
+                if (activeConversation && conversationId === activeConversation.id) {
+                    setMessages([]);
+                }
+            });
+
+            socket.on('searchResults', ({ messages }) => {
+                console.log('Search results received:', messages);
+                // The UI will handle displaying these results
+            });
+
             return () => {
                 socket.off('receiveMessage');
                 socket.off('messageSent');
                 socket.off('conversationUpdated');
                 socket.off('typing');
                 socket.off('stopTyping');
+                socket.off('messageEdited');
+                socket.off('messageDeleted');
+                socket.off('messagePinned');
+                socket.off('chatCleared');
+                socket.off('searchResults');
             };
         }
     }, [socket, activeConversation]);
@@ -99,12 +135,13 @@ export const ChatProvider = ({ children }) => {
         }
     };
 
-    const sendMessage = (receiverId, content) => {
+    const sendMessage = (receiverId, content, replyToId = null) => {
         if (socket && activeConversation) {
             socket.emit('sendMessage', {
                 conversationId: activeConversation.id,
                 receiverId,
                 content,
+                replyToId
             });
         }
     };
@@ -125,6 +162,36 @@ export const ChatProvider = ({ children }) => {
 
     const toggleUserInfo = () => {
         setShowUserInfo((prev) => !prev);
+    };
+
+    const editMessage = (id, receiverId, content) => {
+        if (socket) {
+            socket.emit('editMessage', { id, receiverId, content });
+        }
+    };
+
+    const deleteMessage = (id, receiverId, deleteForEveryone) => {
+        if (socket) {
+            socket.emit('deleteMessage', { id, receiverId, deleteForEveryone });
+        }
+    };
+
+    const pinMessage = (id, receiverId, isPinned) => {
+        if (socket) {
+            socket.emit('pinMessage', { id, receiverId, isPinned });
+        }
+    };
+
+    const clearChat = (conversationId) => {
+        if (socket) {
+            socket.emit('clearChat', { conversationId });
+        }
+    };
+
+    const searchMessages = (conversationId, query) => {
+        if (socket) {
+            socket.emit('searchMessages', { conversationId, query });
+        }
     };
 
     const startConversation = async (otherUserId) => {
@@ -152,7 +219,12 @@ export const ChatProvider = ({ children }) => {
             sendTyping,
             showUserInfo,
             setShowUserInfo,
-            toggleUserInfo
+            toggleUserInfo,
+            editMessage,
+            deleteMessage,
+            pinMessage,
+            clearChat,
+            searchMessages
         }}>
             {children}
         </ChatContext.Provider>

@@ -22,6 +22,18 @@ export class Message {
   @Column({ default: false })
   is_read: boolean;
 
+  @Column({ default: false })
+  is_pinned: boolean;
+
+  @Column({ nullable: true })
+  reply_to_id: number;
+
+  @Column({ default: false })
+  is_edited: boolean;
+
+  @Column({ default: false })
+  is_deleted_everyone: boolean;
+
   @ManyToOne(() => Conversation)
   @JoinColumn({ name: 'conversation_id' })
   conversation: Conversation;

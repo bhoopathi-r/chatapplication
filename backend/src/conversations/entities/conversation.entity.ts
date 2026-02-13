@@ -24,6 +24,12 @@ export class Conversation {
   @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
   last_message_at: Date;
 
+  @Column({ type: 'timestamp', nullable: true })
+  user1_cleared_at: Date;
+
+  @Column({ type: 'timestamp', nullable: true })
+  user2_cleared_at: Date;
+
   @CreateDateColumn()
   created_at: Date;
 }

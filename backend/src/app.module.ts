@@ -11,6 +11,7 @@ import { GatewayModule } from './gateway/gateway.module';
 import { User } from './users/entities/user.entity';
 import { Conversation } from './conversations/entities/conversation.entity';
 import { Message } from './messages/entities/message.entity';
+import { Block } from './users/entities/block.entity';
 
 @Module({
   imports: [
@@ -26,7 +27,7 @@ import { Message } from './messages/entities/message.entity';
         username: configService.get<string>('DATABASE_USER'),
         password: configService.get<string>('DATABASE_PASS'),
         database: configService.get<string>('DATABASE_NAME'),
-        entities: [User, Conversation, Message],
+        entities: [User, Conversation, Message, Block],
         synchronize: true, // Should be false in production
       }),
       inject: [ConfigService],
@@ -40,4 +41,4 @@ import { Message } from './messages/entities/message.entity';
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule {}
+export class AppModule { }
