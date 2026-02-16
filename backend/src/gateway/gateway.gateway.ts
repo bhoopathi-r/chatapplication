@@ -90,6 +90,7 @@ export class GatewayGateway implements OnGatewayConnection, OnGatewayDisconnect 
     const conversationUpdatePayload = {
       conversationId: data.conversationId,
       last_message_at: message.created_at,
+      lastMessage: message,
     };
 
     const receiverSocketId = this.connectedUsers.get(data.receiverId);
