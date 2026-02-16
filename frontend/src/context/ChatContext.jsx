@@ -23,6 +23,15 @@ export const ChatProvider = ({ children }) => {
     useEffect(() => {
         if (activeConversation) {
             loadMessages(activeConversation.id);
+            // Mark messages as read on backend
+            api.post(`/messages/read/${activeConversation.id}`);
+            // Reset unread count for active conversation
+            setConversations((prev) => prev.map(conv => {
+                if (conv.id === activeConversation.id) {
+                    return { ...conv, unreadCount: 0 };
+                }
+                return conv;
+            }));
         }
     }, [activeConversation]);
 
@@ -32,6 +41,14 @@ export const ChatProvider = ({ children }) => {
                 if (activeConversation && message.conversation_id === activeConversation.id) {
                     setMessages((prev) => [...prev, message]);
                     api.post(`/messages/read/${activeConversation.id}`);
+                } else {
+                    // Increment unread count for the conversation
+                    setConversations((prev) => prev.map(conv => {
+                        if (conv.id === message.conversation_id) {
+                            return { ...conv, unreadCount: (conv.unreadCount || 0) + 1 };
+                        }
+                        return conv;
+                    }));
                 }
             });
 
@@ -47,14 +64,15 @@ export const ChatProvider = ({ children }) => {
                     if (conversationIndex === -1) return prev;
 
                     const updatedConversations = [...prev];
-                    const [updatedConversation] = updatedConversations.splice(conversationIndex, 1);
+                    const existingConv = updatedConversations[conversationIndex];
 
-                    // Update timestamp and last message
-                    updatedConversation.last_message_at = last_message_at;
-                    if (lastMessage) {
-                        updatedConversation.lastMessage = lastMessage;
-                    }
+                    const updatedConversation = {
+                        ...existingConv,
+                        last_message_at,
+                        lastMessage: lastMessage || existingConv.lastMessage
+                    };
 
+                    updatedConversations.splice(conversationIndex, 1);
                     // Move to top
                     return [updatedConversation, ...updatedConversations];
                 });

@@ -46,7 +46,7 @@ export class ConversationsService {
       order: { last_message_at: 'DESC' },
     });
 
-    // Fetch the last message for each conversation
+    // Fetch the last message and unread count for each conversation
     for (const conversation of conversations) {
       const lastMessage = await this.conversationsRepository.manager
         .getRepository(Message)
@@ -57,8 +57,18 @@ export class ConversationsService {
 
       if (lastMessage) {
         (conversation as any).lastMessage = lastMessage;
-        console.log(`Found last message for conv ${conversation.id}: ${lastMessage.content}`);
       }
+
+      const unreadCount = await this.conversationsRepository.manager
+        .getRepository(Message)
+        .count({
+          where: {
+            conversation_id: conversation.id,
+            receiver_id: userId,
+            is_read: false,
+          },
+        });
+      (conversation as any).unreadCount = unreadCount;
     }
 
     return conversations;
