@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useChat } from '../context/ChatContext';
 import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
-import { Send, Smile, Paperclip, MoreVertical, ArrowLeft, Search, Trash2, Ban, Edit2, Reply, Pin, Forward, X } from 'lucide-react';
+import { Send, Smile, Paperclip, MoreVertical, ArrowLeft, Search, Trash2, Ban, Edit2, Reply, Pin, Forward, X, ChevronUp, ChevronDown } from 'lucide-react';
 import UserStatus from './user/UserStatus';
 import EmojiPicker from 'emoji-picker-react';
 
@@ -26,6 +26,12 @@ const ChatArea = () => {
     const messageMenuRef = useRef(null);
     const [isSearching, setIsSearching] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
+    const [searchMatches, setSearchMatches] = useState([]);
+    const [currentSearchIndex, setCurrentSearchIndex] = useState(-1);
+    const [showClearConfirm, setShowClearConfirm] = useState(false);
+    const [hoveredMessageId, setHoveredMessageId] = useState(null);
+
+    const messageRefs = useRef({});
 
     const otherUser = activeConversation
         ? (activeConversation.user1_id === user.id ? activeConversation.user2 : activeConversation.user1)
@@ -101,6 +107,53 @@ const ChatArea = () => {
         }
     };
 
+    const handleSearchChange = (e) => {
+        const query = e.target.value;
+        setSearchQuery(query);
+        if (query.trim()) {
+            const matches = messages
+                .filter(msg => msg.content.toLowerCase().includes(query.toLowerCase()))
+                .map(msg => msg.id);
+            setSearchMatches(matches);
+            setCurrentSearchIndex(matches.length > 0 ? 0 : -1);
+            if (matches.length > 0) {
+                const firstMatchId = matches[0];
+                messageRefs.current[firstMatchId]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        } else {
+            setSearchMatches([]);
+            setCurrentSearchIndex(-1);
+        }
+    };
+
+    const navigateSearch = (direction) => {
+        if (searchMatches.length === 0) return;
+        let nextIndex = currentSearchIndex + direction;
+        if (nextIndex < 0) nextIndex = searchMatches.length - 1;
+        if (nextIndex >= searchMatches.length) nextIndex = 0;
+        setCurrentSearchIndex(nextIndex);
+        const matchId = searchMatches[nextIndex];
+        messageRefs.current[matchId]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    };
+
+    const highlightText = (text, highlight) => {
+        if (!highlight.trim()) return text;
+        const parts = text.split(new RegExp(`(${highlight})`, 'gi'));
+        return (
+            <span>
+                {parts.map((part, i) =>
+                    part.toLowerCase() === highlight.toLowerCase() ? (
+                        <span key={i} className="text-blue-500 font-medium underline decoration-blue-300">
+                            {part}
+                        </span>
+                    ) : (
+                        part
+                    )
+                )}
+            </span>
+        );
+    };
+
     if (!activeConversation) {
         return (
             <div className="flex-1 bg-slate-50 flex flex-col items-center justify-center text-slate-400">
@@ -148,7 +201,7 @@ const ChatArea = () => {
                                 <Search size={16} /> Search Messages
                             </button>
                             <button
-                                onClick={() => { clearChat(activeConversation.id); setShowHeaderMenu(false); }}
+                                onClick={() => { setShowClearConfirm(true); setShowHeaderMenu(false); }}
                                 className="w-full px-4 py-2 text-left text-sm text-slate-600 hover:bg-slate-50 flex items-center gap-3 text-red-500"
                             >
                                 <Trash2 size={16} /> Clear Chat
@@ -166,10 +219,23 @@ const ChatArea = () => {
                         placeholder="Search in chat..."
                         className="flex-1 bg-transparent border-none outline-none text-sm text-slate-700"
                         value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
+                        onChange={handleSearchChange}
                         autoFocus
                     />
-                    <button onClick={() => { setIsSearching(false); setSearchQuery(''); }} className="p-1 text-slate-400 hover:text-slate-600">
+                    {searchMatches.length > 0 && (
+                        <div className="flex items-center gap-2 text-xs text-slate-500 mr-2">
+                            <span>{currentSearchIndex + 1} of {searchMatches.length}</span>
+                            <div className="flex gap-1">
+                                <button onClick={() => navigateSearch(-1)} className="p-1 hover:bg-slate-200 rounded transition-colors">
+                                    <ChevronUp size={14} />
+                                </button>
+                                <button onClick={() => navigateSearch(1)} className="p-1 hover:bg-slate-200 rounded transition-colors">
+                                    <ChevronDown size={14} />
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                    <button onClick={() => { setIsSearching(false); setSearchQuery(''); setSearchMatches([]); setCurrentSearchIndex(-1); }} className="p-1 text-slate-400 hover:text-slate-600">
                         <X size={16} />
                     </button>
                 </div>
@@ -184,10 +250,18 @@ const ChatArea = () => {
                     return (
                         <div
                             key={msg.id}
+                            ref={el => messageRefs.current[msg.id] = el}
                             className={`flex ${isMe ? 'justify-end' : 'justify-start'} group relative`}
-                            onClick={(e) => { e.stopPropagation(); setActiveMessageId(isActionOpen ? null : msg.id); }}
+                            onMouseEnter={() => setHoveredMessageId(msg.id)}
+                            onMouseLeave={() => setHoveredMessageId(null)}
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                if (hoveredMessageId === msg.id) {
+                                    setActiveMessageId(isActionOpen ? null : msg.id);
+                                }
+                            }}
                         >
-                            <div className={`max-w-[70%] p-3 rounded-2xl shadow-sm relative ${isMe ? 'bg-primary-600 text-white rounded-br-none' : 'bg-white text-slate-800 rounded-bl-none'} ${searchQuery && msg.content.toLowerCase().includes(searchQuery.toLowerCase()) ? 'ring-2 ring-yellow-400' : ''}`}>
+                            <div className={`max-w-[70%] p-3 rounded-2xl shadow-sm relative ${isMe ? 'bg-primary-600 text-white rounded-br-none' : 'bg-white text-slate-800 rounded-bl-none'} ${searchMatches[currentSearchIndex] === msg.id ? 'ring-2 ring-blue-400' : ''}`}>
                                 {msg.reply_to_id && (
                                     <div className={`mb-2 p-2 rounded-lg border-l-4 text-xs ${isMe ? 'bg-primary-700/50 border-primary-300 text-primary-100' : 'bg-slate-50 border-slate-300 text-slate-500'}`}>
                                         <p className="font-bold truncate">
@@ -197,7 +271,7 @@ const ChatArea = () => {
                                     </div>
                                 )}
                                 {msg.is_pinned && <Pin size={12} className="absolute -top-1 -right-1 text-primary-400 bg-white rounded-full p-0.5" />}
-                                <p className="text-sm">{msg.content}</p>
+                                <p className="text-sm">{highlightText(msg.content, searchQuery)}</p>
                                 <div className="flex items-center justify-end gap-1 mt-1">
                                     {msg.is_edited && <span className="text-[9px] opacity-70">edited</span>}
                                     <p className={`text-[10px] ${isMe ? 'text-primary-100' : 'text-slate-400'}`}>
@@ -285,6 +359,33 @@ const ChatArea = () => {
                     </button>
                 </form>
             </div>
+
+            {/* Clear Chat Confirmation Popup */}
+            {showClearConfirm && (
+                <div className="absolute inset-0 bg-black/20 flex items-center justify-center z-[110] backdrop-blur-sm">
+                    <div className="bg-white rounded-2xl p-6 w-80 shadow-2xl animate-in zoom-in-95 duration-200 border border-slate-100">
+                        <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mb-4 mx-auto text-red-600">
+                            <Trash2 size={24} />
+                        </div>
+                        <h4 className="text-lg font-bold text-slate-800 mb-2 text-center">Clear Chat History?</h4>
+                        <p className="text-sm text-slate-500 mb-6 text-center">This will permanently delete all messages in this conversation. This action cannot be undone.</p>
+                        <div className="space-y-2">
+                            <button
+                                onClick={() => { clearChat(activeConversation.id); setShowClearConfirm(false); }}
+                                className="w-full py-2.5 bg-red-600 text-white rounded-xl font-semibold hover:bg-red-700 transition-colors shadow-sm"
+                            >
+                                Clear History
+                            </button>
+                            <button
+                                onClick={() => setShowClearConfirm(false)}
+                                className="w-full py-2.5 bg-slate-100 text-slate-700 rounded-xl font-semibold hover:bg-slate-200 transition-colors"
+                            >
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Delete Confirmation Popup */}
             {showDeletePopup && (
