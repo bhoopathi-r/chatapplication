@@ -110,6 +110,7 @@ const Sidebar = () => {
                             lastMessage={conv.lastMessage}
                             lastMessageTime={conv.last_message_at}
                             showStatus={false}
+                            unreadCount={conv.unreadCount}
                         />
                     );
                 })}

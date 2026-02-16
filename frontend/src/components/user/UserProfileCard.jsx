@@ -26,7 +26,8 @@ const UserProfileCard = ({
     className = '',
     lastMessage = null,
     lastMessageTime = null,
-    showStatus = true
+    showStatus = true,
+    unreadCount = 0
 }) => {
     if (!user) return null;
 
@@ -113,10 +114,18 @@ const UserProfileCard = ({
                     />
                 </div>
             )}
+
+            {unreadCount > 0 && (
+                <div className="absolute right-5 bottom-3.5">
+                    <div className="bg-red-500 text-white text-[11px] font-bold min-w-[20px] h-5 flex items-center justify-center rounded-full px-1.5 shadow-sm">
+                        {unreadCount}
+                    </div>
+                </div>
+            )}
         </div>
     );
 
-    const baseClasses = `flex items-center gap-3 transition-all ${className}`;
+    const baseClasses = `relative flex items-center gap-3 transition-all ${className}`;
     const interactiveClasses = onClick ? 'cursor-pointer hover:bg-slate-50' : '';
     const activeClasses = isActive ? 'bg-primary-50 border-r-4 border-primary-500' : '';
     const paddingClasses = variant === 'compact' ? 'p-2' : variant === 'detailed' ? 'p-6' : 'p-4';
@@ -153,6 +162,7 @@ UserProfileCard.propTypes = {
     lastMessage: PropTypes.object,
     lastMessageTime: PropTypes.oneOfType([PropTypes.string, PropTypes.instanceOf(Date)]),
     showStatus: PropTypes.bool,
+    unreadCount: PropTypes.number,
 };
 
 export default UserProfileCard;
