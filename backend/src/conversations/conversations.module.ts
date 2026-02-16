@@ -4,11 +4,12 @@ import { ConversationsService } from './conversations.service';
 import { ConversationsController } from './conversations.controller';
 import { Conversation } from './entities/conversation.entity';
 import { User } from '../users/entities/user.entity';
+import { Message } from '../messages/entities/message.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Conversation, User])],
+  imports: [TypeOrmModule.forFeature([Conversation, User, Message])],
   providers: [ConversationsService],
   controllers: [ConversationsController],
   exports: [ConversationsService],
 })
-export class ConversationsModule {}
+export class ConversationsModule { }

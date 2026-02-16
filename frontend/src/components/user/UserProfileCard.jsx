@@ -23,7 +23,10 @@ const UserProfileCard = ({
     showEmail = true,
     onClick = null,
     isActive = false,
-    className = ''
+    className = '',
+    lastMessage = null,
+    lastMessageTime = null,
+    showStatus = true
 }) => {
     if (!user) return null;
 
@@ -58,7 +61,7 @@ const UserProfileCard = ({
                     </span>
                 )}
             </div>
-            {variant !== 'compact' && (
+            {variant !== 'compact' && showStatus && !lastMessage && (
                 <div className="absolute bottom-0 right-0">
                     <UserStatus
                         isOnline={isOnline}
@@ -73,20 +76,43 @@ const UserProfileCard = ({
     );
 
     const renderInfo = () => (
-        <div className="flex-1 min-w-0">
-            <h4 className={`font-semibold flex text-slate-800 truncate ${variant === 'compact' ? 'text-xs' : 'text-sm'}`}>
-                {user.name}
-            </h4>
-            {showEmail && user.email && variant !== 'compact' && (
-                <p className="text-xs text-slate-400 truncate">{user.email}</p>
+        <div className="flex-1 min-w-0 text-left">
+            <div className="flex justify-between items-baseline text-left">
+                <h4 className={`font-bold text-slate-900 truncate text-left ${variant === 'compact' ? 'text-xs' : 'text-[17px]'}`}>
+                    {user.name}
+                </h4>
+                {lastMessageTime && variant !== 'compact' && (
+                    <span className="text-[13px] text-slate-400 font-medium ml-2 shrink-0">
+                        {new Date(lastMessageTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}
+                    </span>
+                )}
+            </div>
+
+            <div className="mt-0.5 text-left">
+                {isTyping ? (
+                    <p className="text-[14px] text-primary-500 font-medium animate-pulse text-left">
+                        typing...
+                    </p>
+                ) : lastMessage ? (
+                    <p className="text-[14px] text-slate-500 truncate leading-tight text-left">
+                        {lastMessage.content}
+                    </p>
+                ) : showEmail && user.email && variant !== 'compact' ? (
+                    <p className="text-xs text-slate-400 truncate text-left">{user.email}</p>
+                ) : null}
+            </div>
+
+            {showStatus && !lastMessage && !isTyping && (
+                <div className="mt-1">
+                    <UserStatus
+                        isOnline={isOnline}
+                        isTyping={isTyping}
+                        lastSeen={user.last_seen}
+                        size={getStatusSize()}
+                        showDot={variant === 'compact'}
+                    />
+                </div>
             )}
-            <UserStatus
-                isOnline={isOnline}
-                isTyping={isTyping}
-                lastSeen={user.last_seen}
-                size={getStatusSize()}
-                showDot={variant === 'compact'}
-            />
         </div>
     );
 
@@ -124,6 +150,9 @@ UserProfileCard.propTypes = {
     onClick: PropTypes.func,
     isActive: PropTypes.bool,
     className: PropTypes.string,
+    lastMessage: PropTypes.object,
+    lastMessageTime: PropTypes.oneOfType([PropTypes.string, PropTypes.instanceOf(Date)]),
+    showStatus: PropTypes.bool,
 };
 
 export default UserProfileCard;

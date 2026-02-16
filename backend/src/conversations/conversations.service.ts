@@ -2,13 +2,14 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Conversation } from './entities/conversation.entity';
+import { Message } from '../messages/entities/message.entity';
 
 @Injectable()
 export class ConversationsService {
   constructor(
     @InjectRepository(Conversation)
     private conversationsRepository: Repository<Conversation>,
-  ) {}
+  ) { }
 
   async findOrCreate(user1Id: number, user2Id: number): Promise<Conversation> {
     let conversation = await this.conversationsRepository.findOne({
@@ -36,7 +37,7 @@ export class ConversationsService {
   }
 
   async findByUser(userId: number): Promise<Conversation[]> {
-    return this.conversationsRepository.find({
+    const conversations = await this.conversationsRepository.find({
       where: [
         { user1_id: userId },
         { user2_id: userId },
@@ -44,6 +45,23 @@ export class ConversationsService {
       relations: ['user1', 'user2'],
       order: { last_message_at: 'DESC' },
     });
+
+    // Fetch the last message for each conversation
+    for (const conversation of conversations) {
+      const lastMessage = await this.conversationsRepository.manager
+        .getRepository(Message)
+        .createQueryBuilder('message')
+        .where('message.conversation_id = :conversationId', { conversationId: conversation.id })
+        .orderBy('message.created_at', 'DESC')
+        .getOne();
+
+      if (lastMessage) {
+        (conversation as any).lastMessage = lastMessage;
+        console.log(`Found last message for conv ${conversation.id}: ${lastMessage.content}`);
+      }
+    }
+
+    return conversations;
   }
 
   async findById(id: number): Promise<Conversation | null> {

@@ -41,7 +41,7 @@ export const ChatProvider = ({ children }) => {
                 }
             });
 
-            socket.on('conversationUpdated', ({ conversationId, last_message_at }) => {
+            socket.on('conversationUpdated', ({ conversationId, last_message_at, lastMessage }) => {
                 setConversations((prev) => {
                     const conversationIndex = prev.findIndex(c => c.id === conversationId);
                     if (conversationIndex === -1) return prev;
@@ -49,8 +49,11 @@ export const ChatProvider = ({ children }) => {
                     const updatedConversations = [...prev];
                     const [updatedConversation] = updatedConversations.splice(conversationIndex, 1);
 
-                    // Update timestamp
+                    // Update timestamp and last message
                     updatedConversation.last_message_at = last_message_at;
+                    if (lastMessage) {
+                        updatedConversation.lastMessage = lastMessage;
+                    }
 
                     // Move to top
                     return [updatedConversation, ...updatedConversations];

@@ -8,7 +8,7 @@ import UserProfileCard from './user/UserProfileCard';
 
 const Sidebar = () => {
     const { user, logout } = useAuth();
-    const { conversations, activeConversation, setActiveConversation, startConversation } = useChat();
+    const { conversations, activeConversation, setActiveConversation, startConversation, typingUsers } = useChat();
     const { onlineUsers } = useSocket();
     const [searchQuery, setSearchQuery] = useState('');
     const [searchResults, setSearchResults] = useState([]);
@@ -94,18 +94,22 @@ const Sidebar = () => {
                     const otherUser = conv.user1_id === user.id ? conv.user2 : conv.user1;
                     const isActive = activeConversation?.id === conv.id;
                     const isOnline = onlineUsers.has(otherUser.id);
+                    const isTyping = typingUsers[conv.id] === otherUser.id;
 
                     return (
                         <UserProfileCard
                             key={conv.id}
                             user={otherUser}
                             isOnline={isOnline}
-                            isTyping={false}
+                            isTyping={isTyping}
                             variant="default"
                             showEmail={false}
                             onClick={() => setActiveConversation(conv)}
                             isActive={isActive}
                             className="w-full"
+                            lastMessage={conv.lastMessage}
+                            lastMessageTime={conv.last_message_at}
+                            showStatus={false}
                         />
                     );
                 })}
